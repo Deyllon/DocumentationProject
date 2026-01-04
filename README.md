@@ -1,15 +1,19 @@
-# 📚 API Documentation - NestJS
+# 📚 Gerador de Documentação Automática de APIs
 
-Uma API RESTful desenvolvida com **NestJS** para documentação automática de endpoints.
+Um sistema inteligente que **gera automaticamente documentação de APIs** em múltiplos formatos a partir do código-fonte.
 
-## 🎯 Descrição do Projeto
+## 🎯 O que é?
 
-Este projeto é uma API que fornece:
+Este projeto é um gerador de **documentação automática** que:
 
--
-- **Documentação Automática**: Swagger UI integrado e exportação para Postman
+- ✅ Analisa os controllers NestJS
+- ✅ Extrai informações dos endpoints automaticamente
+- ✅ Gera **Swagger UI** interativa (HTML)
+- ✅ Exporta para **Postman** (coleção + environment)
+- ✅ Cria especificação **OpenAPI** em JSON
+- ✅ Sincroniza sempre com o código — nenhuma atualização manual necessária!
 
-## 🚀 Configuração Inicial
+## 🚀 Como Usar
 
 ### 1. Instalar Dependências
 
@@ -17,401 +21,247 @@ Este projeto é uma API que fornece:
 npm install
 ```
 
-### 2. Executar o Projeto
+### 2. Iniciar o Servidor
 
 ```bash
-# modo de desenvolvimento (com reload automático)
+# desenvolvimento (com reload automático)
 npm run start:dev
 
 # produção
 npm run start:prod
-
-# modo debug
-npm start --debug --watch
 ```
 
-O servidor será iniciado em `http://localhost:3000`
+O servidor inicia em `http://localhost:3000`
 
-## 📖 Acessar a Documentação Swagger
+## 🔍 Visualizar a Documentação
 
-Após iniciar o servidor, acesse:
+### Swagger UI (HTML Interativo)
+
+A documentação fica **automaticamente gerada** e disponível em:
 
 ```
 http://localhost:3000/docs
 ```
 
-Você verá a interface interativa do Swagger onde pode:
+Aqui você pode:
 
-- Visualizar todos os endpoints disponíveis
-- Testar os endpoints diretamente na interface
-- Ver modelos de request e response
-- Copiar comandos curl
+- ✨ Visualizar todos os endpoints com suas descrições
+- 🧪 Testar endpoints diretamente na interface
+- 📄 Ver schemas de request e response
+- 📋 Copiar comandos cURL
 
-## 📝 Endpoints Disponíveis
+### OpenAPI JSON
+
+Para acessar a especificação bruta em JSON:
+
+```
+http://localhost:3000/api-doc
+```
+
+### Exportar para Postman
+
+Para usar no Postman:
+
+1. Acesse `http://localhost:3000/postman` (coleção)
+2. Acesse `http://localhost:3000/postman/environment` (variáveis de ambiente)
+3. Importe ambos no Postman
+
+## ⚙️ Como a Documentação é Gerada
+
+### Decoradores Customizados
+
+A documentação é extraída automaticamente usando o decorador `@ApiDescription`:
+
+```typescript
+@Post('login')
+@ApiDescription('Autentica um usuário com email e senha')
+async login(@Body() loginDto: LoginDto) {
+  // ...
+}
+```
+
+### Validação com Zod
+
+Os schemas são validados com **Zod**, o que permite gerar tipos precisos:
+
+```typescript
+export const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(6),
+});
+
+export type LoginDto = z.infer<typeof loginSchema>;
+```
+
+### Geração Automática
+
+No `main.ts`, a documentação é gerada automaticamente:
+
+```typescript
+const docService = app.get(DocumentationService);
+const document = docService.generateDocs();
+SwaggerModule.setup('docs', app, document);
+```
+
+O `DocumentationService` analisa os controllers e constrói a especificação OpenAPI dinamicamente.
+
+## 📡 Endpoints da Documentação
+
+### GET `/docs`
+
+Interface **Swagger UI** em HTML (o que você vê no navegador)
+
+### GET `/api-doc`
+
+Especificação **OpenAPI v3.0** em JSON (consumida pelo Swagger UI)
+
+### GET `/postman`
+
+Coleção Postman com todos os endpoints (importar no Postman)
+
+### GET `/postman/environment`
+
+Variáveis de ambiente Postman (URLs, tokens, etc.)
+
+## 📝 Endpoints da API
 
 ### 🔑 Autenticação
 
-#### POST `/auth/login`
+### 🔑 Autenticação
 
-Autentica um usuário e retorna um token JWT.
-
-**Request Body:**
-
-```json
-{
-  "email": "usuario@example.com",
-  "password": "senha123"
-}
-```
-
-**Response (200 OK):**
-
-```json
-{
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "user": {
-    "id": 1,
-    "email": "usuario@example.com",
-    "name": "João Silva"
-  }
-}
-```
-
----
+**POST** `/auth/login` - Autentica usuário e retorna JWT
 
 ### 👥 Usuários
 
-#### POST `/users/register`
+**POST** `/users/register` - Registra novo usuário  
+**GET** `/users` - Lista usuários (requer JWT)  
+**GET** `/users/search` - Busca usuários por nome/email  
+**PUT** `/users/:id` - Atualiza usuário
 
-Registra um novo usuário no sistema.
+### 🧪 Teste
 
-**Request Body:**
+**GET** `/users/test/query` - Teste com query params  
+**POST** `/users/test/body` - Teste com body
 
-```json
-{
-  "email": "novousuario@example.com",
-  "password": "senha123",
-  "name": "Novo Usuário"
-}
-```
+> Todos esses endpoints são **descobertos e documentados automaticamente** pelo sistema!
 
-**Response (201 Created):**
+## 🔧 Stack Técnico
 
-```json
-{
-  "id": 2,
-  "email": "novousuario@example.com",
-  "name": "Novo Usuário",
-  "createdAt": "2026-01-04T10:30:00.000Z"
-}
-```
+**Documentação:**
 
----
+- `@nestjs/swagger` - Integração com Swagger/OpenAPI
+- `swagger-ui-express` - Interface HTML do Swagger
+- `openapi-to-postmanv2` - Conversão para Postman
 
-#### GET `/users`
+**Validação:**
 
-Lista todos os usuários cadastrados. **Requer autenticação JWT**.
+- `zod` - Schema validation e type inference
 
-**Headers Obrigatórios:**
+**Autenticação:**
 
-```
-Authorization: Bearer {seu_token_jwt}
-```
+- `@nestjs/jwt` - Tokens JWT
+- `passport-jwt` - Estratégia JWT
 
-**Response (200 OK):**
-
-```json
-[
-  {
-    "id": 1,
-    "email": "usuario@example.com",
-    "name": "João Silva",
-    "createdAt": "2026-01-04T09:00:00.000Z"
-  },
-  {
-    "id": 2,
-    "email": "novousuario@example.com",
-    "name": "Novo Usuário",
-    "createdAt": "2026-01-04T10:30:00.000Z"
-  }
-]
-```
-
----
-
-#### GET `/users/search`
-
-Busca usuários com filtros opcionais.
-
-**Query Parameters:**
-
-- `name` (opcional): Filtra por nome
-- `email` (opcional): Filtra por email
-- `limit` (opcional): Limite de resultados (padrão: 10)
-
-**Exemplo:**
-
-```
-GET /users/search?name=João&limit=5
-```
-
-**Response (200 OK):**
-
-```json
-[
-  {
-    "id": 1,
-    "email": "usuario@example.com",
-    "name": "João Silva",
-    "createdAt": "2026-01-04T09:00:00.000Z"
-  }
-]
-```
-
----
-
-#### PUT `/users/:id`
-
-Atualiza os dados de um usuário existente.
-
-**Request Body:**
+## 📦 Dependências Chave
 
 ```json
 {
-  "name": "João Silva Atualizado",
-  "email": "novoemail@example.com"
+  "@nestjs/swagger": "^11.2.3",
+  "swagger-ui-express": "^5.0.1",
+  "openapi-to-postmanv2": "4.18.0",
+  "zod": "^4.1.13",
+  "@nestjs/jwt": "^11.0.2"
 }
 ```
 
-**Response (200 OK):**
+## 🎓 Como Adicionar um Novo Endpoint
 
-```json
-{
-  "id": 1,
-  "email": "novoemail@example.com",
-  "name": "João Silva Atualizado",
-  "updatedAt": "2026-01-04T11:00:00.000Z"
-}
-```
+A documentação é **automática**, então basta seguir este padrão:
 
----
+```typescript
+import { Controller, Post, Body, UsePipes } from '@nestjs/common';
+import { ApiDescription } from '../common/decorators/api-description.decorator';
+import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
+import { z } from 'zod';
 
-#### GET `/users/test/query`
-
-Endpoint de teste com query parameters de diferentes tipos.
-
-**Query Parameters:**
-
-- `age` (opcional, number)
-- `isActive` (opcional, boolean)
-- `score` (opcional, float)
-
-**Exemplo:**
-
-```
-GET /users/test/query?age=25&isActive=true&score=8.5
-```
-
-**Response (200 OK):**
-
-```json
-{
-  "age": 25,
-  "isActive": true,
-  "score": 8.5
-}
-```
-
----
-
-#### POST `/users/test/body`
-
-Endpoint de teste com body contendo types diferentes.
-
-**Request Body:**
-
-```json
-{
-  "age": 30,
-  "isActive": true
-}
-```
-
-**Response (200 OK):**
-
-```json
-{
-  "message": "Test successful",
-  "data": {
-    "age": 30,
-    "isActive": true
-  }
-}
-```
-
----
-
-### 🏠 Root Endpoint
-
-#### GET `/`
-
-Retorna uma mensagem de bem-vindo.
-
-**Response (200 OK):**
-
-```json
-{
-  "message": "Hello World!"
-}
-```
-
----
-
-## 📊 Documentação Adicional
-
-#### GET `/api-doc`
-
-Retorna a especificação OpenAPI em formato JSON. Usada pelo Swagger UI.
-
-#### GET `/postman`
-
-Exporta a coleção de endpoints em formato Postman. Importe este arquivo no Postman para testar todos os endpoints.
-
-#### GET `/postman/environment`
-
-Exporta variáveis de ambiente para uso no Postman (ex: URL base, tokens).
-
----
-
-## 🔒 Autenticação JWT
-
-Endpoints que requerem autenticação devem incluir o header:
-
-```
-Authorization: Bearer {seu_token_jwt}
-```
-
-### Como usar:
-
-1. Faça login em `/auth/login` e copie o `access_token`
-2. Em requisições protegidas, adicione o header acima
-3. No Swagger UI, use o botão "Authorize" (🔒) no topo da página
-
----
-
-## 🧪 Executar Testes
-
-```bash
-# testes unitários
-npm run test
-
-# modo watch (reroda ao modificar código)
-npm run test:watch
-
-# cobertura de testes
-npm run test:cov
-
-# testes E2E
-npm run test:e2e
-```
-
----
-
-## 🛠️ Scripts Disponíveis
-
-```bash
-npm run build          # compila o projeto TypeScript
-npm run format         # formata código com Prettier
-npm run start          # inicia em produção
-npm run start:dev      # inicia em desenvolvimento com reload
-npm run start:debug    # inicia com debugger ativo
-npm run start:prod     # executa versão compilada
-npm run lint           # valida e corrige o código
-npm run test           # executa testes
-npm run test:watch     # testes em modo watch
-npm run test:cov       # testes com cobertura
-npm run test:debug     # testes com debugger
-npm run test:e2e       # testes end-to-end
-```
-
----
-
-## 📚 Exemplos de Uso
-
-### Com cURL
-
-**Registrar novo usuário:**
-
-```bash
-curl -X POST http://localhost:3000/users/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "usuario@example.com",
-    "password": "senha123",
-    "name": "João Silva"
-  }'
-```
-
-**Fazer login:**
-
-```bash
-curl -X POST http://localhost:3000/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "usuario@example.com",
-    "password": "senha123"
-  }'
-```
-
-**Listar usuários (com token):**
-
-```bash
-curl -X GET http://localhost:3000/users \
-  -H "Authorization: Bearer {seu_token_aqui}"
-```
-
-### Com Fetch API
-
-```javascript
-// Registrar usuário
-const response = await fetch('http://localhost:3000/users/register', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    email: 'usuario@example.com',
-    password: 'senha123',
-    name: 'João Silva',
-  }),
+// 1. Defina o schema Zod (gera tipos e validação)
+export const mySchema = z.object({
+  name: z.string().describe('Nome do usuário'),
+  age: z.number().describe('Idade em anos'),
 });
-const data = await response.json();
-console.log(data);
+
+export type MyDto = z.infer<typeof mySchema>;
+
+// 2. Crie o endpoint com descrição
+@Controller('my-resource')
+export class MyController {
+  @Post()
+  @ApiDescription('Descrição clara do que o endpoint faz')
+  @UsePipes(new ZodValidationPipe(mySchema))
+  async create(@Body() dto: MyDto) {
+    return { message: 'Sucesso!', data: dto };
+  }
+}
 ```
 
----
+**Pronto!** A documentação será gerada automaticamente incluindo:
 
-## 📦 Dependências Principais
+- ✅ Nome e tipo do endpoint
+- ✅ Descrição com `@ApiDescription`
+- ✅ Tipos de request (extraídos do Zod schema)
+- ✅ Tipos de response (inferidos automaticamente)
+- ✅ Campos obrigatórios vs opcionais
+- ✅ Descrição de cada campo
 
-- **@nestjs/core** - Framework NestJS
-- **@nestjs/jwt** - Autenticação JWT
-- **@nestjs/swagger** - Documentação Swagger
-- **@nestjs/passport** - Estratégia de autenticação
-- **passport-jwt** - Estratégia JWT para Passport
-- **zod** - Validação de schemas
-- **swagger-ui-express** - Interface Swagger
+## 🎯 Fluxo de Geração
 
----
+```
+Código com @ApiDescription
+        ↓
+    DocumentationService
+        ↓
+  Analisa Controllers
+        ↓
+  Extrai Schemas Zod
+        ↓
+  Gera OpenAPI Spec
+        ↓
+  ┌─────────────────┐
+  ├─ Swagger UI (HTML)
+  ├─ OpenAPI JSON
+  └─ Postman Collection
+```
 
-## Run tests
+## 📊 Arquivos Importantes
+
+- [`src/documentation/documentation.service.ts`](src/documentation/documentation.service.ts) - Lógica de geração
+- [`src/common/decorators/api-description.decorator.ts`](src/common/decorators/api-description.decorator.ts) - Decorador personalizado
+- [`src/common/pipes/zod-validation.pipe.ts`](src/common/pipes/zod-validation.pipe.ts) - Validação com Zod
+- [`src/main.ts`](src/main.ts) - Setup do Swagger
+
+## 🧪 Testar a Documentação
 
 ```bash
-# unit tests
-$ npm run test
+# Inicia o servidor
+npm run start:dev
 
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+# Acesse no navegador
+# http://localhost:3000/docs
 ```
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+Após qualquer mudança no código, a documentação é regenerada automaticamente!
+
+## 🛠️ Scripts
+
+```bash
+npm install              # instalar dependências
+npm run start:dev        # iniciar com reload
+npm run start:prod       # iniciar produção
+npm run build            # compilar
+npm run lint             # verificar código
+npm run test             # rodar testes
+```
+
+## 📜 Licença
+
+UNLICENSED
